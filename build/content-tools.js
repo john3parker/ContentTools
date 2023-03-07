@@ -5560,7 +5560,7 @@
 }).call(this);
 
 (function() {
-  var AttributeUI, ContentTools, CropMarksUI, StyleUI, exports, _EditorApp,
+  var AttributeUI, ButtonLink, ButtonLinkDialog, ContentTools, CropMarksUI, PageSelect, PageSelectDialog, StyleUI, exports, _EditorApp,
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
@@ -6950,6 +6950,7 @@
       this._domCaption = this.constructor.createDiv(['ct-dialog__caption']);
       domHeader.appendChild(this._domCaption);
       this.caption(this._caption);
+      console.log('mounting dialog - seeting domClose event');
       this._domClose = this.constructor.createDiv(['ct-dialog__close']);
       domHeader.appendChild(this._domClose);
       domBody = this.constructor.createDiv(['ct-dialog__body']);
@@ -7382,7 +7383,7 @@
     LinkDialog.prototype.mount = function() {
       LinkDialog.__super__.mount.call(this);
       this._domInput = document.createElement('input');
-      this._domInput.setAttribute('class', 'ct-anchored-dialog__input');
+      this._domInput.setAttribute('class', 'ct-anchored-dialog__input form-input text-primary');
       this._domInput.setAttribute('name', 'href');
       this._domInput.setAttribute('placeholder', ContentEdit._('Enter a link') + '...');
       this._domInput.setAttribute('type', 'text');
@@ -7390,6 +7391,8 @@
       this._domElement.appendChild(this._domInput);
       this._domTargetButton = this.constructor.createDiv(['ct-anchored-dialog__target-button']);
       this._domElement.appendChild(this._domTargetButton);
+      this._domStyleButton = this.constructor.createDiv(['btn btn-success'], '', 'hello world');
+      this._domElement.appendChild(this._domStyleButton);
       if (this._target === NEW_WINDOW_TARGET) {
         ContentEdit.addCSSClass(this._domTargetButton, 'ct-anchored-dialog__target-button--active');
       }
@@ -10767,5 +10770,832 @@
     return Remove;
 
   })(ContentTools.Tool);
+
+  ButtonLink = (function(_super) {
+    __extends(ButtonLink, _super);
+
+    function ButtonLink() {
+      return ButtonLink.__super__.constructor.apply(this, arguments);
+    }
+
+    ContentTools.ToolShelf.stow(ButtonLink, 'buttonlink');
+
+    ButtonLink.label = 'Button link';
+
+    ButtonLink.icon = 'buttonlink';
+
+    ButtonLink.tagName = 'a';
+
+    ButtonLink.getAttr = function(attrName, element, selection) {
+      var c, from, selectedContent, tag, to, _i, _j, _len, _len1, _ref, _ref1, _ref2;
+      if (element.type() === 'Image') {
+        if (element.a) {
+          return element.a[attrName];
+        }
+      } else if (element.isFixed() && element.tagName() === 'a') {
+        return element.attr(attrName);
+      } else {
+        _ref = selection.get(), from = _ref[0], to = _ref[1];
+        selectedContent = element.content.slice(from, to);
+        _ref1 = selectedContent.characters;
+        for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
+          c = _ref1[_i];
+          if (!c.hasTags('a')) {
+            continue;
+          }
+          _ref2 = c.tags();
+          for (_j = 0, _len1 = _ref2.length; _j < _len1; _j++) {
+            tag = _ref2[_j];
+            if (tag.name() === 'a') {
+              return tag.attr(attrName);
+            }
+          }
+        }
+      }
+      return '';
+    };
+
+    ButtonLink.canApply = function(element, selection) {
+      var character;
+      if (element.type() === 'Image') {
+        return true;
+      } else if (element.isFixed() && element.tagName() === 'a') {
+        return true;
+      } else {
+        if (!element.content) {
+          return false;
+        }
+        if (!selection) {
+          return false;
+        }
+        if (selection.isCollapsed()) {
+          character = element.content.characters[selection.get()[0]];
+          if (!character || !character.hasTags('a')) {
+            return false;
+          }
+        }
+        return true;
+      }
+    };
+
+    ButtonLink.isApplied = function(element, selection) {
+      if (element.type() === 'Image') {
+        return element.a;
+      } else if (element.isFixed() && element.tagName() === 'a') {
+        return true;
+      } else {
+        return ButtonLink.__super__.constructor.isApplied.call(this, element, selection);
+      }
+    };
+
+    ButtonLink.apply = function(element, selection, callback) {
+      var allowScrolling, app, applied, characters, dialog, domElement, ends, from, measureSpan, modal, rect, selectTag, starts, to, toolDetail, transparent, _ref;
+      toolDetail = {
+        'tool': this,
+        'element': element,
+        'selection': selection
+      };
+      if (!this.dispatchEditorEvent('tool-apply', toolDetail)) {
+        return;
+      }
+      applied = false;
+      if (element.type() === 'Image') {
+        rect = element.domElement().getBoundingClientRect();
+      } else if (element.isFixed() && element.tagName() === 'a') {
+        rect = element.domElement().getBoundingClientRect();
+      } else {
+        if (selection.isCollapsed()) {
+          characters = element.content.characters;
+          starts = selection.get(0)[0];
+          ends = starts;
+          while (starts > 0 && characters[starts - 1].hasTags('a')) {
+            starts -= 1;
+          }
+          while (ends < characters.length && characters[ends].hasTags('a')) {
+            ends += 1;
+          }
+          selection = new ContentSelect.Range(starts, ends);
+          selection.select(element.domElement());
+        }
+        element.storeState();
+        selectTag = new HTMLString.Tag('span', {
+          'class': 'ct--pseudo-select'
+        });
+        _ref = selection.get(), from = _ref[0], to = _ref[1];
+        element.content = element.content.format(from, to, selectTag);
+        element.updateInnerHTML();
+        domElement = element.domElement();
+        measureSpan = domElement.getElementsByClassName('ct--pseudo-select');
+        rect = measureSpan[0].getBoundingClientRect();
+      }
+      app = ContentTools.EditorApp.get();
+      modal = new ContentTools.ModalUI(transparent = true, allowScrolling = true);
+      modal.addEventListener('click', function() {
+        this.unmount();
+        dialog.hide();
+        if (element.content) {
+          element.content = element.content.unformat(from, to, selectTag);
+          element.updateInnerHTML();
+          element.restoreState();
+        }
+        callback(applied);
+        if (applied) {
+          return ContentTools.Tools.Link.dispatchEditorEvent('tool-applied', toolDetail);
+        }
+      });
+      console.log('class=', this.getAttr('class', element, selection));
+      dialog = new ButtonLinkDialog(this.getAttr('href', element, selection), this.getAttr('target', element, selection), this.getAttr('class', element, selection));
+      dialog.addEventListener('save', function(ev) {
+        var a, alignmentClassNames, className, detail, firstATag, i, linkClasses, tag, _i, _j, _k, _l, _len, _len1, _len2, _ref1;
+        detail = ev.detail();
+        applied = true;
+        console.log('saving!');
+        if (element.type() === 'Image') {
+          alignmentClassNames = ['align-center', 'align-left', 'align-right'];
+          if (detail.href) {
+            element.a = {
+              href: detail.href
+            };
+            if (detail.target) {
+              element.a.target = detail.target;
+            }
+            for (_i = 0, _len = alignmentClassNames.length; _i < _len; _i++) {
+              className = alignmentClassNames[_i];
+              if (element.hasCSSClass(className)) {
+                element.removeCSSClass(className);
+                element.a['class'] = className;
+                break;
+              }
+            }
+          } else {
+            linkClasses = [];
+            if (element.a['class']) {
+              linkClasses = element.a['class'].split(' ');
+            }
+            for (_j = 0, _len1 = alignmentClassNames.length; _j < _len1; _j++) {
+              className = alignmentClassNames[_j];
+              if (linkClasses.indexOf(className) > -1) {
+                element.addCSSClass(className);
+                break;
+              }
+            }
+            element.a = null;
+          }
+          element.unmount();
+          element.mount();
+        } else if (element.isFixed() && element.tagName() === 'a') {
+          element.attr('href', detail.href);
+        } else {
+          firstATag = null;
+          for (i = _k = from; from <= to ? _k < to : _k > to; i = from <= to ? ++_k : --_k) {
+            _ref1 = element.content.characters[i].tags();
+            for (_l = 0, _len2 = _ref1.length; _l < _len2; _l++) {
+              tag = _ref1[_l];
+              if (tag.name() === 'a') {
+                firstATag = tag;
+                break;
+              }
+            }
+            if (firstATag) {
+              break;
+            }
+          }
+          element.content = element.content.unformat(from, to, 'a');
+          if (detail.href) {
+            if (firstATag) {
+              a = firstATag.copy();
+            } else {
+              a = new HTMLString.Tag('a');
+            }
+            a.attr('href', detail.href);
+            if (detail.target) {
+              a.attr('target', detail.target);
+            } else {
+              a.removeAttr('target');
+            }
+            console.log('building Anchor', a, detail);
+            if (detail.style) {
+              a.attr('class', 'btn ' + detail.style);
+            } else {
+              a.attr('class', '');
+            }
+            a.attr('style', 'font-size: inherit;');
+            element.content = element.content.format(from, to, a);
+            element.content.optimize();
+          }
+          element.updateInnerHTML();
+        }
+        element.taint();
+        return modal.dispatchEvent(modal.createEvent('click'));
+      });
+      dialog.addEventListener('cancel', (function(_this) {
+        return function() {
+          modal.hide();
+          dialog.hide();
+          if (element.restoreState) {
+            element.restoreState();
+          }
+          return callback(false);
+        };
+      })(this));
+      app.attach(modal);
+      app.attach(dialog);
+      modal.show();
+      return dialog.show();
+    };
+
+    return ButtonLink;
+
+  })(ContentTools.Tools.Link);
+
+  ButtonLinkDialog = (function(_super) {
+    __extends(ButtonLinkDialog, _super);
+
+    function ButtonLinkDialog(buttonLink, buttonTarget, buttonClasses) {
+      this.buttonLink = buttonLink;
+      this.buttonTarget = buttonTarget;
+      this.buttonClasses = buttonClasses;
+      console.log('dialog link=', this.buttonLink, this.buttonTarget, this.buttonClasses);
+      if (this.buttonLink) {
+        ButtonLinkDialog.__super__.constructor.call(this, 'Update button link');
+      } else {
+        ButtonLinkDialog.__super__.constructor.call(this, 'Insert button link');
+      }
+    }
+
+    ButtonLinkDialog.prototype.mount = function() {
+      var buttonSizes, cfg, className, classStyles, domBodyLabel, domButtonSizeLabel, domClassSelectLabel, domControlGroup, domStyleOption, self, size, style, targetCSSClasses, targetLabel, _i, _j, _k, _len, _len1, _len2, _ref;
+      ButtonLinkDialog.__super__.mount.call(this);
+      cfg = {
+        url: '',
+        style: '',
+        target: this.buttonTarget
+      };
+      if (this.buttonLink) {
+        cfg.url = this.buttonLink;
+      }
+      if (this.buttonClasses) {
+        _ref = this.buttonClasses.split(' ');
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          className = _ref[_i];
+          console.log('className=', className);
+          cfg[className] = true;
+        }
+      }
+      ContentEdit.addCSSClass(this._domElement, 'ct-table-dialog');
+      ContentEdit.addCSSClass(this._domView, 'ct-table-dialog__view');
+      this._domBodySection = this.constructor.createDiv(['ct-section', 'ct-section--applied', 'ct-section--contains-input']);
+      this._domView.appendChild(this._domBodySection);
+      domBodyLabel = this.constructor.createDiv(['ct-section__label']);
+      domBodyLabel.textContent = ContentEdit._('URL');
+      domBodyLabel.setAttribute('style', 'width: 50px;');
+      this._domBodySection.appendChild(domBodyLabel);
+      this._domBodyInput = document.createElement('input');
+      this._domBodyInput.setAttribute('class', 'form-control');
+      this._domBodyInput.setAttribute('maxlength', '255');
+      this._domBodyInput.setAttribute('name', 'linkUrl');
+      this._domBodyInput.setAttribute('type', 'text');
+      this._domBodyInput.setAttribute('value', cfg.url);
+      this._domBodyInput.setAttribute('style', 'width: 89%; height: 46px;');
+      this._domBodyInput.setAttribute('placeholder', 'Enter a link...');
+      this._domBodySection.appendChild(this._domBodyInput);
+      targetCSSClasses = ['ct-section'];
+      if (cfg.target) {
+        targetCSSClasses.push('ct-section--applied');
+      } else {
+        console.log('targetis set to =', cfg.target, cfg);
+      }
+      this._domTargetSection = this.constructor.createDiv(targetCSSClasses);
+      this._domView.appendChild(this._domTargetSection);
+      targetLabel = this.constructor.createDiv(['ct-section__label']);
+      targetLabel.textContent = ContentEdit._('Open in new window');
+      this._domTargetSection.appendChild(targetLabel);
+      this._domTargetSwitch = this.constructor.createDiv(['ct-section__switch']);
+      this._domTargetSection.appendChild(this._domTargetSwitch);
+      this._domTargetSection.addEventListener('click', this.toggleSection);
+      this._domClassSection = this.constructor.createDiv(['ct-section', 'ct-section--applied', 'ct-section--contains-input']);
+      this._domView.appendChild(this._domClassSection);
+      domClassSelectLabel = this.constructor.createDiv(['ct-section__label']);
+      domClassSelectLabel.textContent = ContentEdit._('Style');
+      domClassSelectLabel.setAttribute('style', 'width: 50px;');
+      this._domClassSection.appendChild(domClassSelectLabel);
+      this._domClassSelect = document.createElement('select');
+      this._domClassSelect.setAttribute('class', 'form-select');
+      this._domClassSelect.setAttribute('maxlength', '255');
+      this._domClassSelect.setAttribute('name', 'buttonStyle');
+      this._domClassSelect.setAttribute('style', 'width: 89%; height: 46px;');
+      this._domClassSelect.setAttribute('placeholder', 'Select a button style...');
+      this._domClassSection.appendChild(this._domClassSelect);
+      self = this;
+      classStyles = [
+        {
+          name: 'No button style',
+          style: ''
+        }, {
+          name: 'Button primary',
+          style: 'btn-primary'
+        }, {
+          name: 'Button secondary',
+          style: 'btn-secondary'
+        }, {
+          name: 'Button success',
+          style: 'btn-success'
+        }, {
+          name: 'Button danger',
+          style: 'btn-danger'
+        }, {
+          name: 'Button warning',
+          style: 'btn-warning'
+        }, {
+          name: 'Button info',
+          style: 'btn-info'
+        }, {
+          name: 'Button light',
+          style: 'btn-light'
+        }, {
+          name: 'Button dark',
+          style: 'btn-dark'
+        }
+      ];
+      for (_j = 0, _len1 = classStyles.length; _j < _len1; _j++) {
+        style = classStyles[_j];
+        domStyleOption = document.createElement('option');
+        domStyleOption.setAttribute('value', style.style);
+        domStyleOption.textContent = ContentEdit._(style.name);
+        if (cfg[style.style]) {
+          domStyleOption.setAttribute('selected', '');
+        }
+        self._domClassSelect.append(domStyleOption);
+      }
+      this._domButtonSizeSection = this.constructor.createDiv(['ct-section', 'ct-section--applied', 'ct-section--contains-input']);
+      this._domView.appendChild(this._domButtonSizeSection);
+      domButtonSizeLabel = this.constructor.createDiv(['ct-section__label']);
+      domButtonSizeLabel.textContent = ContentEdit._('Size');
+      domButtonSizeLabel.setAttribute('style', 'width: 50px;');
+      this._domButtonSizeSection.appendChild(domButtonSizeLabel);
+      this._domButtonSizeSelect = document.createElement('select');
+      this._domButtonSizeSelect.setAttribute('class', 'form-select');
+      this._domButtonSizeSelect.setAttribute('maxlength', '255');
+      this._domButtonSizeSelect.setAttribute('name', 'buttonSize');
+      this._domButtonSizeSelect.setAttribute('style', 'width: 89%; height: 46px;');
+      this._domButtonSizeSelect.setAttribute('placeholder', 'Select a button size...');
+      this._domButtonSizeSection.appendChild(this._domButtonSizeSelect);
+      buttonSizes = [
+        {
+          name: 'No sizing (default)',
+          style: ''
+        }, {
+          name: 'Small button',
+          style: 'btn-sm'
+        }, {
+          name: 'Large button',
+          style: 'btn-lg'
+        }, {
+          name: 'XLarge button',
+          style: 'p-5'
+        }
+      ];
+      for (_k = 0, _len2 = buttonSizes.length; _k < _len2; _k++) {
+        size = buttonSizes[_k];
+        domStyleOption = document.createElement('option');
+        domStyleOption.setAttribute('value', size.style);
+        domStyleOption.textContent = ContentEdit._(size.name);
+        if (cfg[size.style]) {
+          domStyleOption.setAttribute('selected', '');
+        }
+        self._domButtonSizeSelect.append(domStyleOption);
+      }
+      domControlGroup = this.constructor.createDiv(['ct-control-group', 'ct-control-group--right']);
+      this._domControls.appendChild(domControlGroup);
+      this._domApply = this.constructor.createDiv(['ct-control', 'ct-control--text', 'ct-control--apply']);
+      this._domApply.textContent = 'Apply';
+      domControlGroup.appendChild(this._domApply);
+      return this._addDOMEventListeners();
+    };
+
+    ButtonLinkDialog.prototype.toggleSection = function(ev) {
+      ev.preventDefault();
+      if (this.getAttribute('class').indexOf('ct-section--applied') > -1) {
+        return ContentEdit.removeCSSClass(this, 'ct-section--applied');
+      } else {
+        return ContentEdit.addCSSClass(this, 'ct-section--applied');
+      }
+    };
+
+    ButtonLinkDialog.prototype.save = function() {
+      var detail;
+      detail = {
+        href: this._domBodyInput.value,
+        style: this._domClassSelect.value + ' ' + this._domButtonSizeSelect.value
+      };
+      if (this._domTargetSection.getAttribute('class').indexOf('ct-section--applied') > -1) {
+        detail.target = '_blank';
+      }
+      return this.dispatchEvent(this.createEvent('save', detail));
+    };
+
+    ButtonLinkDialog.prototype.unmount = function() {
+      ButtonLinkDialog.__super__.unmount.call(this);
+      this._domBodyInput = null;
+      this._domBodySection = null;
+      this._domApply = null;
+      this._domClassSelect = null;
+      return this._domButtonSizeSelect = null;
+    };
+
+    ButtonLinkDialog.prototype._addDOMEventListeners = function() {
+      ButtonLinkDialog.__super__._addDOMEventListeners.call(this);
+      this._domBodySection.addEventListener('click', (function(_this) {
+        return function(ev) {
+          return _this._domBodyInput.focus();
+        };
+      })(this));
+      return this._domApply.addEventListener('click', (function(_this) {
+        return function(ev) {
+          var cssClass;
+          ev.preventDefault();
+          cssClass = _this._domApply.getAttribute('class');
+          if (cssClass.indexOf('ct-control--muted') === -1) {
+            return _this.save();
+          }
+        };
+      })(this));
+    };
+
+    return ButtonLinkDialog;
+
+  })(ContentTools.DialogUI);
+
+  PageSelect = (function(_super) {
+    __extends(PageSelect, _super);
+
+    function PageSelect() {
+      return PageSelect.__super__.constructor.apply(this, arguments);
+    }
+
+    ContentTools.ToolShelf.stow(PageSelect, 'pageselect');
+
+    PageSelect.label = 'Insert page link';
+
+    PageSelect.icon = 'pageselect';
+
+    PageSelect.tagName = 'a';
+
+    PageSelect.getAttr = function(attrName, element, selection) {
+      var c, from, selectedContent, tag, to, _i, _j, _len, _len1, _ref, _ref1, _ref2;
+      if (element.type() === 'Image') {
+        if (element.a) {
+          return element.a[attrName];
+        }
+      } else if (element.isFixed() && element.tagName() === 'a') {
+        return element.attr(attrName);
+      } else {
+        _ref = selection.get(), from = _ref[0], to = _ref[1];
+        selectedContent = element.content.slice(from, to);
+        _ref1 = selectedContent.characters;
+        for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
+          c = _ref1[_i];
+          if (!c.hasTags('a')) {
+            continue;
+          }
+          _ref2 = c.tags();
+          for (_j = 0, _len1 = _ref2.length; _j < _len1; _j++) {
+            tag = _ref2[_j];
+            if (tag.name() === 'a') {
+              return tag.attr(attrName);
+            }
+          }
+        }
+      }
+      return '';
+    };
+
+    PageSelect.canApply = function(element, selection) {
+      var character;
+      if (element.type() === 'Image') {
+        return true;
+      } else if (element.isFixed() && element.tagName() === 'a') {
+        return true;
+      } else {
+        if (!element.content) {
+          return false;
+        }
+        if (!selection) {
+          return false;
+        }
+        if (selection.isCollapsed()) {
+          character = element.content.characters[selection.get()[0]];
+          if (!character || !character.hasTags('a')) {
+            return false;
+          }
+        }
+        return true;
+      }
+    };
+
+    PageSelect.isApplied = function(element, selection) {
+      if (element.type() === 'Image') {
+        return element.a;
+      } else if (element.isFixed() && element.tagName() === 'a') {
+        return true;
+      } else {
+        return PageSelect.__super__.constructor.isApplied.call(this, element, selection);
+      }
+    };
+
+    PageSelect.apply = function(element, selection, callback) {
+      var allowScrolling, app, applied, characters, dialog, domElement, ends, from, measureSpan, modal, rect, selectTag, starts, to, toolDetail, transparent, _ref;
+      toolDetail = {
+        'tool': this,
+        'element': element,
+        'selection': selection
+      };
+      if (!this.dispatchEditorEvent('tool-apply', toolDetail)) {
+        return;
+      }
+      applied = false;
+      if (element.type() === 'Image') {
+        rect = element.domElement().getBoundingClientRect();
+      } else if (element.isFixed() && element.tagName() === 'a') {
+        rect = element.domElement().getBoundingClientRect();
+      } else {
+        if (selection.isCollapsed()) {
+          characters = element.content.characters;
+          starts = selection.get(0)[0];
+          ends = starts;
+          while (starts > 0 && characters[starts - 1].hasTags('a')) {
+            starts -= 1;
+          }
+          while (ends < characters.length && characters[ends].hasTags('a')) {
+            ends += 1;
+          }
+          selection = new ContentSelect.Range(starts, ends);
+          selection.select(element.domElement());
+        }
+        element.storeState();
+        selectTag = new HTMLString.Tag('span', {
+          'class': 'ct--pseudo-select'
+        });
+        _ref = selection.get(), from = _ref[0], to = _ref[1];
+        element.content = element.content.format(from, to, selectTag);
+        element.updateInnerHTML();
+        domElement = element.domElement();
+        measureSpan = domElement.getElementsByClassName('ct--pseudo-select');
+        rect = measureSpan[0].getBoundingClientRect();
+      }
+      app = ContentTools.EditorApp.get();
+      modal = new ContentTools.ModalUI(transparent = true, allowScrolling = true);
+      modal.addEventListener('click', function() {
+        this.unmount();
+        dialog.hide();
+        if (element.content) {
+          element.content = element.content.unformat(from, to, selectTag);
+          element.updateInnerHTML();
+          element.restoreState();
+        }
+        callback(applied);
+        if (applied) {
+          return ContentTools.Tools.Link.dispatchEditorEvent('tool-applied', toolDetail);
+        }
+      });
+      console.log('class=', this.getAttr('class', element, selection));
+      dialog = new PageSelectDialog(this.getAttr('href', element, selection), this.getAttr('target', element, selection), this.getAttr('class', element, selection));
+      dialog.addEventListener('save', function(ev) {
+        var a, alignmentClassNames, className, detail, firstATag, i, linkClasses, tag, _i, _j, _k, _l, _len, _len1, _len2, _ref1;
+        detail = ev.detail();
+        applied = true;
+        console.log('saving!');
+        if (element.type() === 'Image') {
+          alignmentClassNames = ['align-center', 'align-left', 'align-right'];
+          if (detail.href) {
+            element.a = {
+              href: detail.href
+            };
+            if (detail.target) {
+              element.a.target = detail.target;
+            }
+            for (_i = 0, _len = alignmentClassNames.length; _i < _len; _i++) {
+              className = alignmentClassNames[_i];
+              if (element.hasCSSClass(className)) {
+                element.removeCSSClass(className);
+                element.a['class'] = className;
+                break;
+              }
+            }
+          } else {
+            linkClasses = [];
+            if (element.a['class']) {
+              linkClasses = element.a['class'].split(' ');
+            }
+            for (_j = 0, _len1 = alignmentClassNames.length; _j < _len1; _j++) {
+              className = alignmentClassNames[_j];
+              if (linkClasses.indexOf(className) > -1) {
+                element.addCSSClass(className);
+                break;
+              }
+            }
+            element.a = null;
+          }
+          element.unmount();
+          element.mount();
+        } else if (element.isFixed() && element.tagName() === 'a') {
+          element.attr('href', detail.href);
+        } else {
+          firstATag = null;
+          for (i = _k = from; from <= to ? _k < to : _k > to; i = from <= to ? ++_k : --_k) {
+            _ref1 = element.content.characters[i].tags();
+            for (_l = 0, _len2 = _ref1.length; _l < _len2; _l++) {
+              tag = _ref1[_l];
+              if (tag.name() === 'a') {
+                firstATag = tag;
+                break;
+              }
+            }
+            if (firstATag) {
+              break;
+            }
+          }
+          element.content = element.content.unformat(from, to, 'a');
+          if (detail.href) {
+            if (firstATag) {
+              a = firstATag.copy();
+            } else {
+              a = new HTMLString.Tag('a');
+            }
+            a.attr('href', detail.href);
+            if (detail.target) {
+              a.attr('target', detail.target);
+            } else {
+              a.removeAttr('target');
+            }
+            element.content = element.content.format(from, to, a);
+            element.content.optimize();
+          }
+          element.updateInnerHTML();
+        }
+        element.taint();
+        return modal.dispatchEvent(modal.createEvent('click'));
+      });
+      dialog.addEventListener('cancel', (function(_this) {
+        return function() {
+          modal.hide();
+          dialog.hide();
+          if (element.restoreState) {
+            element.restoreState();
+          }
+          return callback(false);
+        };
+      })(this));
+      app.attach(modal);
+      app.attach(dialog);
+      modal.show();
+      return dialog.show();
+    };
+
+    return PageSelect;
+
+  })(ContentTools.Tools.Link);
+
+  PageSelectDialog = (function(_super) {
+    __extends(PageSelectDialog, _super);
+
+    function PageSelectDialog(pageLink, pageTarget, pageClasses) {
+      this.pageLink = pageLink;
+      this.pageTarget = pageTarget;
+      this.pageClasses = pageClasses;
+      console.log('dialog link=', this.pageLink, this.pageTarget, this.pageClasses);
+      if (this.pageLink) {
+        PageSelectDialog.__super__.constructor.call(this, 'Update page');
+      } else {
+        PageSelectDialog.__super__.constructor.call(this, 'Insert page');
+      }
+    }
+
+    PageSelectDialog.prototype.mount = function() {
+      var cfg, className, domControlGroup, domPageLabel, self, targetCSSClasses, targetLabel, _i, _len, _ref;
+      PageSelectDialog.__super__.mount.call(this);
+      cfg = {
+        url: '',
+        style: '',
+        target: this.pageTarget
+      };
+      if (this.pageLink) {
+        cfg.url = this.pageLink;
+      }
+      if (this.buttonClasses) {
+        _ref = this.pageClasses.split(' ');
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          className = _ref[_i];
+          console.log('className=', className);
+          cfg[className] = true;
+        }
+      }
+      ContentEdit.addCSSClass(this._domElement, 'ct-table-dialog');
+      ContentEdit.addCSSClass(this._domView, 'ct-table-dialog__view');
+      this._domPageSection = this.constructor.createDiv(['ct-section', 'ct-section--applied', 'ct-section--contains-input']);
+      this._domView.appendChild(this._domPageSection);
+      domPageLabel = this.constructor.createDiv(['ct-section__label']);
+      domPageLabel.textContent = ContentEdit._('Page');
+      domPageLabel.setAttribute('style', 'width: 50px;');
+      this._domPageSection.appendChild(domPageLabel);
+      this._domPageSelect = document.createElement('select');
+      this._domPageSelect.setAttribute('class', 'form-select');
+      this._domPageSelect.setAttribute('maxlength', '255');
+      this._domPageSelect.setAttribute('name', 'pageName');
+      this._domPageSelect.setAttribute('style', 'width: 89%; height: 46px;');
+      this._domPageSelect.setAttribute('placeholder', 'Select a page...');
+      this._domPageSection.appendChild(this._domPageSelect);
+      self = this;
+      if (ContentTools.PAGE_CALLBACK) {
+        ContentTools.PAGE_CALLBACK().then(function(data) {
+          var domPageOption, page, _j, _len1, _ref1;
+          this._pages = data;
+          console.log('# pages', this._pages);
+          _ref1 = this._pages;
+          for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+            page = _ref1[_j];
+            console.log('page=', page);
+            domPageOption = document.createElement('option');
+            domPageOption.setAttribute('value', page.permalink);
+            domPageOption.textContent = ContentEdit._(page.title);
+            if (cfg.url === page.permalink) {
+              domPageOption.setAttribute('selected', '');
+            }
+            self._domPageSelect.append(domPageOption);
+          }
+          return console.log('done loading pages');
+        });
+      }
+      targetCSSClasses = ['ct-section'];
+      if (cfg.target) {
+        targetCSSClasses.push('ct-section--applied');
+      } else {
+        console.log('targetis set to =', cfg.target, cfg);
+      }
+      this._domTargetSection = this.constructor.createDiv(targetCSSClasses);
+      this._domView.appendChild(this._domTargetSection);
+      targetLabel = this.constructor.createDiv(['ct-section__label']);
+      targetLabel.textContent = ContentEdit._('Open in new window');
+      this._domTargetSection.appendChild(targetLabel);
+      this._domTargetSwitch = this.constructor.createDiv(['ct-section__switch']);
+      this._domTargetSection.appendChild(this._domTargetSwitch);
+      this._domTargetSection.addEventListener('click', this.toggleSection);
+      domControlGroup = this.constructor.createDiv(['ct-control-group', 'ct-control-group--right']);
+      this._domControls.appendChild(domControlGroup);
+      this._domApply = this.constructor.createDiv(['ct-control', 'ct-control--text', 'ct-control--apply']);
+      this._domApply.textContent = 'Apply';
+      domControlGroup.appendChild(this._domApply);
+      return this._addDOMEventListeners();
+    };
+
+    PageSelectDialog.prototype.toggleSection = function(ev) {
+      ev.preventDefault();
+      if (this.getAttribute('class').indexOf('ct-section--applied') > -1) {
+        return ContentEdit.removeCSSClass(this, 'ct-section--applied');
+      } else {
+        return ContentEdit.addCSSClass(this, 'ct-section--applied');
+      }
+    };
+
+    PageSelectDialog.prototype.save = function() {
+      var detail;
+      detail = {
+        href: this._domPageSelect.value
+      };
+      if (this._domTargetSection.getAttribute('class').indexOf('ct-section--applied') > -1) {
+        detail.target = '_blank';
+      }
+      return this.dispatchEvent(this.createEvent('save', detail));
+    };
+
+    PageSelectDialog.prototype.unmount = function() {
+      PageSelectDialog.__super__.unmount.call(this);
+      this._domPageSelect = null;
+      this._domPageSection = null;
+      return this._domApply = null;
+    };
+
+    PageSelectDialog.prototype._addDOMEventListeners = function() {
+      PageSelectDialog.__super__._addDOMEventListeners.call(this);
+      this._domPageSection.addEventListener('click', (function(_this) {
+        return function(ev) {
+          return _this._domPageSelect.focus();
+        };
+      })(this));
+      return this._domApply.addEventListener('click', (function(_this) {
+        return function(ev) {
+          var cssClass;
+          ev.preventDefault();
+          cssClass = _this._domApply.getAttribute('class');
+          if (cssClass.indexOf('ct-control--muted') === -1) {
+            return _this.save();
+          }
+        };
+      })(this));
+    };
+
+    return PageSelectDialog;
+
+  })(ContentTools.DialogUI);
 
 }).call(this);

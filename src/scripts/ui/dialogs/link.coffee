@@ -20,7 +20,7 @@ class ContentTools.LinkDialog extends ContentTools.AnchoredDialogUI
 
         # Create the input element for the link
         @_domInput = document.createElement('input')
-        @_domInput.setAttribute('class', 'ct-anchored-dialog__input')
+        @_domInput.setAttribute('class', 'ct-anchored-dialog__input form-input text-primary')
         @_domInput.setAttribute('name', 'href')
         @_domInput.setAttribute(
             'placeholder',
@@ -35,6 +35,9 @@ class ContentTools.LinkDialog extends ContentTools.AnchoredDialogUI
         @_domTargetButton = @constructor.createDiv([
             'ct-anchored-dialog__target-button'])
         @_domElement.appendChild(@_domTargetButton)
+
+        @_domStyleButton = @constructor.createDiv(['btn btn-success'], '', 'hello world')
+        @_domElement.appendChild(@_domStyleButton)
 
         # Check if the new window target has already been set for the link
         if @_target == NEW_WINDOW_TARGET

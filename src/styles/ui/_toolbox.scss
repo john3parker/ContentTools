@@ -184,6 +184,8 @@
         &--undo:before           { content: "\e965"; }
         &--redo:before           { content: "\e966"; }
         &--remove:before         { content: "\e9ac"; }
+        &--buttonlink:before     { content: "\eacc"; }
+        &--pageselect:before     { content: "\e925"; }
 
     } // .ct-tool
 

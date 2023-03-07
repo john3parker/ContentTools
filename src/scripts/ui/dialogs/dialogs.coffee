@@ -161,6 +161,7 @@ class ContentTools.DialogUI extends ContentTools.WidgetUI
         @caption(@_caption)
 
         # Close button
+        console.log('mounting dialog - seeting domClose event')
         @_domClose = @constructor.createDiv(['ct-dialog__close'])
         domHeader.appendChild(@_domClose)
 
