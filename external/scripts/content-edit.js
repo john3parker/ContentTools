@@ -5267,6 +5267,7 @@
       return null;
     };
 
+
     TableCell.prototype.type = function() {
       return 'TableCell';
     };
@@ -5276,7 +5277,11 @@
       if (indent == null) {
         indent = '';
       }
-      lines = ["" + indent + "<" + (this.tagName()) + (this._attributesToString()) + ">"];
+      tableCellAttributes = ''
+      if (this.tableCellText()) {
+          tableCellAttributes = this.tableCellText()._attributesToString()
+      }
+      lines = ["" + indent + "<" + (this.tagName()) + " " + tableCellAttributes + ">"];
       if (this.tableCellText()) {
         lines.push(this.tableCellText().html(indent + ContentEdit.INDENT));
       }
@@ -5294,9 +5299,11 @@
     TableCell.prototype._removeDOMEventListners = function() {};
 
     TableCell.fromDOMElement = function(domElement) {
-      var tableCell, tableCellText;
-      tableCell = new this(domElement.tagName, this.getDOMElementAttributes(domElement));
-      tableCellText = new ContentEdit.TableCellText(domElement.innerHTML.replace(/^\s+|\s+$/g, ''));
+      var tableCell, tableCellText, tableCellAttributes;      
+      // create the tableCell without attributes so they don't get duplicated while editing
+      tableCell = new this(domElement.tagName, {}); 
+      // Set the attributes on the TableCellText so we can retrieve/show in the style editor AND so the style is represented 
+      tableCellText = new ContentEdit.TableCellText(domElement.innerHTML.replace(/^\s+|\s+$/g, ''), this.getDOMElementAttributes(domElement));
       tableCell.attach(tableCellText);
       return tableCell;
     };
@@ -5308,8 +5315,8 @@
   ContentEdit.TableCellText = (function(_super) {
     __extends(TableCellText, _super);
 
-    function TableCellText(content) {
-      TableCellText.__super__.constructor.call(this, 'div', {}, content);
+    function TableCellText(content, attributes) {
+      TableCellText.__super__.constructor.call(this, 'div', attributes, content);
     }
 
     TableCellText.prototype.cssTypeName = function() {

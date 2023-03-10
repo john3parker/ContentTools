@@ -500,7 +500,7 @@ class ContentTools.Tools.Heading extends ContentTools.Tool
             # Change the text elements tag name
 
             # Remove any CSS classes from the element
-            element.removeAttr('class')
+            # element.removeAttr('class')
 
             # If the element already has the same tag name as the tool will
             # apply revert the element to a paragraph.

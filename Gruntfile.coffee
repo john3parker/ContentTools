@@ -43,6 +43,7 @@ module.exports = (grunt) ->
                         # Custom tools
                         'src/custom/buttonLink.coffee'
                         'src/custom/pageSelect.coffee'
+                        'src/custom/styleTool.coffee'
                     ]
 
             sandbox:

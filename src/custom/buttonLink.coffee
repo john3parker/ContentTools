@@ -158,7 +158,7 @@ class ButtonLink extends ContentTools.Tools.Link
                     )
 
         # Dialog
-        console.log('class=', @getAttr('class', element, selection))
+        # console.log('class=', @getAttr('class', element, selection))
         dialog = new ButtonLinkDialog(
             @getAttr('href', element, selection),
             @getAttr('target', element, selection)
@@ -169,7 +169,7 @@ class ButtonLink extends ContentTools.Tools.Link
             detail = ev.detail()
 
             applied = true
-            console.log('saving!')
+            #console.log('saving!')
 
             # Add the link
             if element.type() is 'Image'
@@ -245,7 +245,7 @@ class ButtonLink extends ContentTools.Tools.Link
                     else
                         a.removeAttr('target')
 
-                    console.log('building Anchor', a, detail)
+                    # console.log('building Anchor', a, detail)
                     if (detail.style)
                         a.attr('class', 'btn ' + detail.style)
                     else
@@ -290,7 +290,7 @@ class ButtonLinkDialog extends ContentTools.DialogUI
     # A dialog to support inserting/update a buttonLink
 
     constructor: (@buttonLink, @buttonTarget, @buttonClasses)->
-        console.log('dialog link=', @buttonLink, @buttonTarget, @buttonClasses)
+        # console.log('dialog link=', @buttonLink, @buttonTarget, @buttonClasses)
         if @buttonLink
             super('Update button link')
         else
@@ -309,7 +309,7 @@ class ButtonLinkDialog extends ContentTools.DialogUI
 
         if @buttonClasses
             for className in @buttonClasses.split(' ')
-                console.log('className=', className)
+                # console.log('className=', className)
                 cfg[className] = true
             
             #console.log(@buttonClasses.split(' ')[1])
@@ -353,8 +353,6 @@ class ButtonLinkDialog extends ContentTools.DialogUI
         targetCSSClasses = ['ct-section']
         if cfg.target
             targetCSSClasses.push('ct-section--applied')
-        else
-            console.log('targetis set to =', cfg.target, cfg)
         @_domTargetSection = @constructor.createDiv(targetCSSClasses)
         @_domView.appendChild(@_domTargetSection)
 

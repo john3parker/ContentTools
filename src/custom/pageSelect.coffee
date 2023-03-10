@@ -158,7 +158,7 @@ class PageSelect extends ContentTools.Tools.Link
                     )
 
         # Dialog
-        console.log('class=', @getAttr('class', element, selection))
+        #console.log('class=', @getAttr('class', element, selection))
         dialog = new PageSelectDialog(
             @getAttr('href', element, selection),
             @getAttr('target', element, selection)
@@ -169,7 +169,7 @@ class PageSelect extends ContentTools.Tools.Link
             detail = ev.detail()
 
             applied = true
-            console.log('saving!')
+            #console.log('saving!')
 
             # Add the link
             if element.type() is 'Image'
@@ -283,7 +283,7 @@ class PageSelectDialog extends ContentTools.DialogUI
     # A dialog to support inserting/update a pageselect
 
     constructor: (@pageLink, @pageTarget, @pageClasses)->
-        console.log('dialog link=', @pageLink, @pageTarget, @pageClasses)
+        #console.log('dialog link=', @pageLink, @pageTarget, @pageClasses)
         if @pageLink
             super('Update page')
         else
@@ -302,7 +302,7 @@ class PageSelectDialog extends ContentTools.DialogUI
 
         if @buttonClasses
             for className in @pageClasses.split(' ')
-                console.log('className=', className)
+                #console.log('className=', className)
                 cfg[className] = true
             
             #console.log(@buttonClasses.split(' ')[1])
@@ -346,25 +346,23 @@ class PageSelectDialog extends ContentTools.DialogUI
         if ContentTools.PAGE_CALLBACK
             ContentTools.PAGE_CALLBACK().then (data)->
                 @_pages = data
-                console.log('# pages', @_pages)
+                #console.log('# pages', @_pages)
                 for page in @_pages
                     # select options
-                    console.log('page=', page)
+                    #console.log('page=', page)
                     domPageOption = document.createElement('option')
                     domPageOption.setAttribute('value', page.permalink)
                     domPageOption.textContent = ContentEdit._(page.title)
                     if (cfg.url == page.permalink)
                         domPageOption.setAttribute('selected', '')
                     self._domPageSelect.append(domPageOption)
-                console.log('done loading pages')
+                #console.log('done loading pages')
 
         # HREF Target
         # Add a button class section e.g btn-primary
         targetCSSClasses = ['ct-section']
         if cfg.target
             targetCSSClasses.push('ct-section--applied')
-        else
-            console.log('targetis set to =', cfg.target, cfg)
         @_domTargetSection = @constructor.createDiv(targetCSSClasses)
         @_domView.appendChild(@_domTargetSection)
 

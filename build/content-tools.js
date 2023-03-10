@@ -5267,6 +5267,7 @@
       return null;
     };
 
+
     TableCell.prototype.type = function() {
       return 'TableCell';
     };
@@ -5276,7 +5277,11 @@
       if (indent == null) {
         indent = '';
       }
-      lines = ["" + indent + "<" + (this.tagName()) + (this._attributesToString()) + ">"];
+      tableCellAttributes = ''
+      if (this.tableCellText()) {
+          tableCellAttributes = this.tableCellText()._attributesToString()
+      }
+      lines = ["" + indent + "<" + (this.tagName()) + " " + tableCellAttributes + ">"];
       if (this.tableCellText()) {
         lines.push(this.tableCellText().html(indent + ContentEdit.INDENT));
       }
@@ -5294,9 +5299,11 @@
     TableCell.prototype._removeDOMEventListners = function() {};
 
     TableCell.fromDOMElement = function(domElement) {
-      var tableCell, tableCellText;
-      tableCell = new this(domElement.tagName, this.getDOMElementAttributes(domElement));
-      tableCellText = new ContentEdit.TableCellText(domElement.innerHTML.replace(/^\s+|\s+$/g, ''));
+      var tableCell, tableCellText, tableCellAttributes;      
+      // create the tableCell without attributes so they don't get duplicated while editing
+      tableCell = new this(domElement.tagName, {}); 
+      // Set the attributes on the TableCellText so we can retrieve/show in the style editor AND so the style is represented 
+      tableCellText = new ContentEdit.TableCellText(domElement.innerHTML.replace(/^\s+|\s+$/g, ''), this.getDOMElementAttributes(domElement));
       tableCell.attach(tableCellText);
       return tableCell;
     };
@@ -5308,8 +5315,8 @@
   ContentEdit.TableCellText = (function(_super) {
     __extends(TableCellText, _super);
 
-    function TableCellText(content) {
-      TableCellText.__super__.constructor.call(this, 'div', {}, content);
+    function TableCellText(content, attributes) {
+      TableCellText.__super__.constructor.call(this, 'div', attributes, content);
     }
 
     TableCellText.prototype.cssTypeName = function() {
@@ -5560,7 +5567,7 @@
 }).call(this);
 
 (function() {
-  var AttributeUI, ButtonLink, ButtonLinkDialog, ContentTools, CropMarksUI, PageSelect, PageSelectDialog, StyleUI, exports, _EditorApp,
+  var AttributeUI, ButtonLink, ButtonLinkDialog, ContentTools, CropMarksUI, PageSelect, PageSelectDialog, StyleTool, StyleToolDialog, StyleUI, exports, _EditorApp,
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
@@ -6950,7 +6957,6 @@
       this._domCaption = this.constructor.createDiv(['ct-dialog__caption']);
       domHeader.appendChild(this._domCaption);
       this.caption(this._caption);
-      console.log('mounting dialog - seeting domClose event');
       this._domClose = this.constructor.createDiv(['ct-dialog__close']);
       domHeader.appendChild(this._domClose);
       domBody = this.constructor.createDiv(['ct-dialog__body']);
@@ -9835,7 +9841,6 @@
         textElement.focus();
         textElement.selection(selection);
       } else {
-        element.removeAttr('class');
         if (element.tagName() === this.tagName) {
           element.tagName('p');
         } else {
@@ -10903,13 +10908,11 @@
           return ContentTools.Tools.Link.dispatchEditorEvent('tool-applied', toolDetail);
         }
       });
-      console.log('class=', this.getAttr('class', element, selection));
       dialog = new ButtonLinkDialog(this.getAttr('href', element, selection), this.getAttr('target', element, selection), this.getAttr('class', element, selection));
       dialog.addEventListener('save', function(ev) {
         var a, alignmentClassNames, className, detail, firstATag, i, linkClasses, tag, _i, _j, _k, _l, _len, _len1, _len2, _ref1;
         detail = ev.detail();
         applied = true;
-        console.log('saving!');
         if (element.type() === 'Image') {
           alignmentClassNames = ['align-center', 'align-left', 'align-right'];
           if (detail.href) {
@@ -10973,7 +10976,6 @@
             } else {
               a.removeAttr('target');
             }
-            console.log('building Anchor', a, detail);
             if (detail.style) {
               a.attr('class', 'btn ' + detail.style);
             } else {
@@ -11015,7 +11017,6 @@
       this.buttonLink = buttonLink;
       this.buttonTarget = buttonTarget;
       this.buttonClasses = buttonClasses;
-      console.log('dialog link=', this.buttonLink, this.buttonTarget, this.buttonClasses);
       if (this.buttonLink) {
         ButtonLinkDialog.__super__.constructor.call(this, 'Update button link');
       } else {
@@ -11038,7 +11039,6 @@
         _ref = this.buttonClasses.split(' ');
         for (_i = 0, _len = _ref.length; _i < _len; _i++) {
           className = _ref[_i];
-          console.log('className=', className);
           cfg[className] = true;
         }
       }
@@ -11062,8 +11062,6 @@
       targetCSSClasses = ['ct-section'];
       if (cfg.target) {
         targetCSSClasses.push('ct-section--applied');
-      } else {
-        console.log('targetis set to =', cfg.target, cfg);
       }
       this._domTargetSection = this.constructor.createDiv(targetCSSClasses);
       this._domView.appendChild(this._domTargetSection);
@@ -11358,13 +11356,11 @@
           return ContentTools.Tools.Link.dispatchEditorEvent('tool-applied', toolDetail);
         }
       });
-      console.log('class=', this.getAttr('class', element, selection));
       dialog = new PageSelectDialog(this.getAttr('href', element, selection), this.getAttr('target', element, selection), this.getAttr('class', element, selection));
       dialog.addEventListener('save', function(ev) {
         var a, alignmentClassNames, className, detail, firstATag, i, linkClasses, tag, _i, _j, _k, _l, _len, _len1, _len2, _ref1;
         detail = ev.detail();
         applied = true;
-        console.log('saving!');
         if (element.type() === 'Image') {
           alignmentClassNames = ['align-center', 'align-left', 'align-right'];
           if (detail.href) {
@@ -11463,7 +11459,6 @@
       this.pageLink = pageLink;
       this.pageTarget = pageTarget;
       this.pageClasses = pageClasses;
-      console.log('dialog link=', this.pageLink, this.pageTarget, this.pageClasses);
       if (this.pageLink) {
         PageSelectDialog.__super__.constructor.call(this, 'Update page');
       } else {
@@ -11486,7 +11481,6 @@
         _ref = this.pageClasses.split(' ');
         for (_i = 0, _len = _ref.length; _i < _len; _i++) {
           className = _ref[_i];
-          console.log('className=', className);
           cfg[className] = true;
         }
       }
@@ -11508,29 +11502,26 @@
       self = this;
       if (ContentTools.PAGE_CALLBACK) {
         ContentTools.PAGE_CALLBACK().then(function(data) {
-          var domPageOption, page, _j, _len1, _ref1;
+          var domPageOption, page, _j, _len1, _ref1, _results;
           this._pages = data;
-          console.log('# pages', this._pages);
           _ref1 = this._pages;
+          _results = [];
           for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
             page = _ref1[_j];
-            console.log('page=', page);
             domPageOption = document.createElement('option');
             domPageOption.setAttribute('value', page.permalink);
             domPageOption.textContent = ContentEdit._(page.title);
             if (cfg.url === page.permalink) {
               domPageOption.setAttribute('selected', '');
             }
-            self._domPageSelect.append(domPageOption);
+            _results.push(self._domPageSelect.append(domPageOption));
           }
-          return console.log('done loading pages');
+          return _results;
         });
       }
       targetCSSClasses = ['ct-section'];
       if (cfg.target) {
         targetCSSClasses.push('ct-section--applied');
-      } else {
-        console.log('targetis set to =', cfg.target, cfg);
       }
       this._domTargetSection = this.constructor.createDiv(targetCSSClasses);
       this._domView.appendChild(this._domTargetSection);
@@ -11595,6 +11586,425 @@
     };
 
     return PageSelectDialog;
+
+  })(ContentTools.DialogUI);
+
+  StyleTool = (function(_super) {
+    __extends(StyleTool, _super);
+
+    function StyleTool() {
+      return StyleTool.__super__.constructor.apply(this, arguments);
+    }
+
+    ContentTools.ToolShelf.stow(StyleTool, 'styletool');
+
+    StyleTool.label = 'Style Tool';
+
+    StyleTool.icon = 'styletool';
+
+    StyleTool.tagName = '';
+
+    StyleTool.getAttr = function(attrName, element, selection) {
+      var c, from, selectedContent, tag, to, _i, _j, _len, _len1, _ref, _ref1, _ref2;
+      if (element.type() === 'Image') {
+        if (element.a) {
+          return element.a[attrName];
+        }
+      } else if (element.isFixed() && element.tagName() === 'a') {
+        return element.attr(attrName);
+      } else {
+        _ref = selection.get(), from = _ref[0], to = _ref[1];
+        selectedContent = element.content.slice(from, to);
+        _ref1 = selectedContent.characters;
+        for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
+          c = _ref1[_i];
+          if (!c.hasTags('a')) {
+            continue;
+          }
+          _ref2 = c.tags();
+          for (_j = 0, _len1 = _ref2.length; _j < _len1; _j++) {
+            tag = _ref2[_j];
+            if (tag.name() === 'a') {
+              return tag.attr(attrName);
+            }
+          }
+        }
+      }
+      return '';
+    };
+
+    StyleTool.canApply = function(element, selection) {
+      var character;
+      if (element.type() === 'Image') {
+        return true;
+      } else if (element.type() === 'Text') {
+        return true;
+      } else if (element.isFixed() && element.tagName() === 'a') {
+        return true;
+      } else if (element.isFixed() && element.tagName() === 'h1') {
+        return true;
+      } else {
+        if (!element.content) {
+          return false;
+        }
+        if (!selection) {
+          return false;
+        }
+        if (selection.isCollapsed()) {
+          character = element.content.characters[selection.get()[0]];
+          if (!character || !character.hasTags('a')) {
+            return false;
+          }
+        }
+        return true;
+      }
+    };
+
+    StyleTool.isApplied = function(element, selection) {
+      var from, to, _ref;
+      if (element.content === void 0 || !element.content.length()) {
+        return false;
+      }
+      if (selection) {
+        _ref = selection.get(), from = _ref[0], to = _ref[1];
+        if (from === to) {
+          to += 1;
+        }
+        return element.content.slice(from, to).hasTags(this.tagName, true);
+      }
+      return false;
+    };
+
+    StyleTool.apply = function(element, selection, callback) {
+      var allowScrolling, app, applied, dialog, modal, toolDetail, transparent;
+      toolDetail = {
+        'tool': this,
+        'element': element,
+        'selection': selection
+      };
+      if (!this.dispatchEditorEvent('tool-apply', toolDetail)) {
+        return;
+      }
+      applied = false;
+      app = ContentTools.EditorApp.get();
+      modal = new ContentTools.ModalUI(transparent = true, allowScrolling = true);
+      modal.addEventListener('click', function() {
+        this.unmount();
+        dialog.hide();
+        if (element.content) {
+          element.updateInnerHTML();
+          element.restoreState();
+        }
+        callback(applied);
+        if (applied) {
+          return ContentTools.Tools.Link.dispatchEditorEvent('tool-applied', toolDetail);
+        }
+      });
+      dialog = new StyleToolDialog(element.attr('class'), element.attr('style'));
+      dialog.addEventListener('save', function(ev) {
+        var className, classes, detail, style, _i, _len, _ref;
+        detail = ev.detail();
+        applied = true;
+        classes = element.attr('class');
+        if (classes) {
+          _ref = classes.split(' ');
+          for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+            className = _ref[_i];
+            element.removeCSSClass(className);
+          }
+        }
+        if ((ev.detail().textColor)) {
+          element.addCSSClass(ev.detail().textColor);
+        }
+        if ((ev.detail().textBackgroundColor)) {
+          element.addCSSClass(ev.detail().textBackgroundColor);
+        }
+        style = '';
+        if ((ev.detail().marginTop)) {
+          style += 'margin-top:' + ev.detail().marginTop + ';';
+        }
+        if ((ev.detail().marginBottom)) {
+          style += 'margin-bottom:' + ev.detail().marginBottom + ';';
+        }
+        if ((ev.detail().marginLeft)) {
+          style += 'margin-left:' + ev.detail().marginLeft + ';';
+        }
+        if ((ev.detail().marginRight)) {
+          style += 'margin-right:' + ev.detail().marginRight + ';';
+        }
+        if ((ev.detail().paddingTop)) {
+          style += 'padding-top:' + ev.detail().paddingTop + ';';
+        }
+        if ((ev.detail().paddingBottom)) {
+          style += 'padding-bottom:' + ev.detail().paddingBottom + ';';
+        }
+        if ((ev.detail().paddingLeft)) {
+          style += 'padding-left:' + ev.detail().paddingLeft + ';';
+        }
+        if ((ev.detail().paddingRight)) {
+          style += 'padding-right:' + ev.detail().paddingRight + ';';
+        }
+        if (style) {
+          element.attr('style', style);
+        }
+        element.taint();
+        return modal.dispatchEvent(modal.createEvent('click'));
+      });
+      dialog.addEventListener('cancel', (function(_this) {
+        return function() {
+          modal.hide();
+          dialog.hide();
+          if (element.restoreState) {
+            element.restoreState();
+          }
+          return callback(false);
+        };
+      })(this));
+      app.attach(modal);
+      app.attach(dialog);
+      modal.show();
+      return dialog.show();
+    };
+
+    return StyleTool;
+
+  })(ContentTools.Tools.Link);
+
+  StyleToolDialog = (function(_super) {
+    __extends(StyleToolDialog, _super);
+
+    function StyleToolDialog(classes, styles) {
+      this.classes = classes;
+      this.styles = styles;
+      StyleToolDialog.__super__.constructor.call(this, 'Styles');
+    }
+
+    StyleToolDialog.prototype.mount = function() {
+      var cfg, className, domControlGroup, domStyleOption, domTextBackgroundColorLabel, domTextColorLabel, self, style, styleParts, textBackgroundColor, textBackgroundColorStyles, textColor, textColorStyles, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1;
+      StyleToolDialog.__super__.mount.call(this);
+      cfg = {};
+      if (this.classes) {
+        _ref = this.classes.split(' ');
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          className = _ref[_i];
+          cfg[className] = true;
+        }
+      }
+      if (this.styles) {
+        this.styles = this.styles.replace(/\n/, "").replace(/\r/, "").replace(/\t/, "").trim();
+        _ref1 = this.styles.split(';');
+        for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+          style = _ref1[_j];
+          styleParts = style.split(':');
+          cfg[styleParts[0]] = styleParts[1];
+        }
+      }
+      ContentEdit.addCSSClass(this._domElement, 'ct-table-dialog');
+      ContentEdit.addCSSClass(this._domView, 'ct-table-dialog__view');
+      this._domTextColorSection = this.constructor.createDiv(['ct-section', 'ct-section--applied', 'ct-section--contains-input']);
+      this._domView.appendChild(this._domTextColorSection);
+      domTextColorLabel = this.constructor.createDiv(['ct-section__label']);
+      domTextColorLabel.textContent = ContentEdit._('Text color');
+      domTextColorLabel.setAttribute('style', 'width: 50%;');
+      this._domTextColorSection.appendChild(domTextColorLabel);
+      this._domTextColorSelect = document.createElement('select');
+      this._domTextColorSelect.setAttribute('class', 'form-select');
+      this._domTextColorSelect.setAttribute('style', 'width: 50%; height: 46px;');
+      this._domTextColorSection.appendChild(this._domTextColorSelect);
+      self = this;
+      textColorStyles = [
+        {
+          name: 'No text style',
+          style: ''
+        }, {
+          name: 'Text primary',
+          style: 'text-primary'
+        }, {
+          name: 'Text secondary',
+          style: 'text-secondary'
+        }, {
+          name: 'Text success',
+          style: 'text-success'
+        }, {
+          name: 'Text danger',
+          style: 'text-danger'
+        }, {
+          name: 'Text warning',
+          style: 'text-warning'
+        }, {
+          name: 'Text info',
+          style: 'text-info'
+        }, {
+          name: 'Text light',
+          style: 'text-light'
+        }, {
+          name: 'Text dark',
+          style: 'text-dark'
+        }
+      ];
+      for (_k = 0, _len2 = textColorStyles.length; _k < _len2; _k++) {
+        textColor = textColorStyles[_k];
+        domStyleOption = document.createElement('option');
+        domStyleOption.setAttribute('value', textColor.style);
+        domStyleOption.textContent = ContentEdit._(textColor.name);
+        if (cfg[textColor.style]) {
+          domStyleOption.setAttribute('selected', '');
+        }
+        self._domTextColorSelect.append(domStyleOption);
+      }
+      this._domTextBackgroundColorSection = this.constructor.createDiv(['ct-section', 'ct-section--applied', 'ct-section--contains-input']);
+      this._domView.appendChild(this._domTextBackgroundColorSection);
+      domTextBackgroundColorLabel = this.constructor.createDiv(['ct-section__label']);
+      domTextBackgroundColorLabel.textContent = ContentEdit._('Text background color');
+      domTextBackgroundColorLabel.setAttribute('style', 'width: 50%;');
+      this._domTextBackgroundColorSection.appendChild(domTextBackgroundColorLabel);
+      this._domTextBackgroundColorSelect = document.createElement('select');
+      this._domTextBackgroundColorSelect.setAttribute('class', 'form-select');
+      this._domTextBackgroundColorSelect.setAttribute('maxlength', '255');
+      this._domTextBackgroundColorSelect.setAttribute('name', 'buttonSize');
+      this._domTextBackgroundColorSelect.setAttribute('style', 'width: 50%; height: 46px;');
+      this._domTextBackgroundColorSelect.setAttribute('placeholder', 'Select a button size...');
+      this._domTextBackgroundColorSection.appendChild(this._domTextBackgroundColorSelect);
+      textBackgroundColorStyles = [
+        {
+          name: 'No text background style',
+          style: ''
+        }, {
+          name: 'Text Background primary',
+          style: 'text-bg-primary'
+        }, {
+          name: 'Text Background secondary',
+          style: 'text-bg-secondary'
+        }, {
+          name: 'Text Background success',
+          style: 'text-bg-success'
+        }, {
+          name: 'Text Background danger',
+          style: 'text-bg-danger'
+        }, {
+          name: 'Text Background warning',
+          style: 'text-bg-warning'
+        }, {
+          name: 'Text Background info',
+          style: 'text-bg-info'
+        }, {
+          name: 'Text Background light',
+          style: 'text-bg-light'
+        }, {
+          name: 'Text Background dark',
+          style: 'text-bg-dark'
+        }
+      ];
+      for (_l = 0, _len3 = textBackgroundColorStyles.length; _l < _len3; _l++) {
+        textBackgroundColor = textBackgroundColorStyles[_l];
+        domStyleOption = document.createElement('option');
+        domStyleOption.setAttribute('value', textBackgroundColor.style);
+        domStyleOption.textContent = ContentEdit._(textBackgroundColor.name);
+        if (cfg[textBackgroundColor.style]) {
+          domStyleOption.setAttribute('selected', '');
+        }
+        self._domTextBackgroundColorSelect.append(domStyleOption);
+      }
+      this._domMarginSection = this.constructor.createDiv(['ct-section', 'ct-section--applied', 'ct-section--contains-input', 'row', 'mt-2']);
+      this._domPaddingSection = this.constructor.createDiv(['ct-section', 'ct-section--applied', 'ct-section--contains-input', 'row', 'mt-2']);
+      this._domView.appendChild(this._domMarginSection);
+      this._domView.appendChild(this._domPaddingSection);
+      this._domMarginTopInput = this.createInput('domMarginTopInput', 'Top margin', cfg['margin-top']);
+      this._domMarginBottomInput = this.createInput('domMarginBottomInput', 'Bottom margin', cfg['margin-bottom']);
+      this._domMarginLeftInput = this.createInput('domMarginLeftInput', 'Left margin', cfg['margin-left']);
+      this._domMarginRightInput = this.createInput('domMarginRightInput', 'Right margin', cfg['margin-right']);
+      this._domPaddingTopInput = this.createInput('domPaddingTopInput', 'Top padding', cfg['padding-top']);
+      this._domPaddingBottomInput = this.createInput('domPaddingBottomInput', 'Bottom padding', cfg['padding-bottom']);
+      this._domPaddingLeftInput = this.createInput('domPaddingLeftInput', 'Left padding', cfg['padding-left']);
+      this._domPaddingRightInput = this.createInput('domPaddingRightInput', 'Right padding', cfg['padding-right']);
+      this._domMarginSection.appendChild(this._domMarginTopInput);
+      this._domMarginSection.appendChild(this._domMarginBottomInput);
+      this._domMarginSection.appendChild(this._domMarginLeftInput);
+      this._domMarginSection.appendChild(this._domMarginRightInput);
+      this._domPaddingSection.appendChild(this._domPaddingTopInput);
+      this._domPaddingSection.appendChild(this._domPaddingBottomInput);
+      this._domPaddingSection.appendChild(this._domPaddingLeftInput);
+      this._domPaddingSection.appendChild(this._domPaddingRightInput);
+      domControlGroup = this.constructor.createDiv(['ct-control-group', 'ct-control-group--right']);
+      this._domControls.appendChild(domControlGroup);
+      this._domApply = this.constructor.createDiv(['ct-control', 'ct-control--text', 'ct-control--apply']);
+      this._domApply.textContent = 'Apply';
+      domControlGroup.appendChild(this._domApply);
+      return this._addDOMEventListeners();
+    };
+
+    StyleToolDialog.prototype.createInput = function(name, label, defaultValue) {
+      var domDiv, domInput, domMarginTopLabel;
+      domDiv = document.createElement('div');
+      domDiv.setAttribute('class', 'form-floating col-3 pe-2');
+      domInput = document.createElement('input');
+      domInput.setAttribute('id', name);
+      domInput.setAttribute('type', 'text');
+      domInput.setAttribute('style', 'height: 46px;');
+      domInput.setAttribute('class', 'form-control');
+      domInput.setAttribute('placeholder', label);
+      if (defaultValue) {
+        domInput.setAttribute('value', defaultValue);
+      }
+      domMarginTopLabel = document.createElement('label');
+      domMarginTopLabel.setAttribute('for', name);
+      domMarginTopLabel.setAttribute('style', 'padding: 0;');
+      domMarginTopLabel.textContent = ContentEdit._(label);
+      domDiv.appendChild(domInput);
+      domDiv.appendChild(domMarginTopLabel);
+      return domDiv;
+    };
+
+    StyleToolDialog.prototype.toggleSection = function(ev) {
+      ev.preventDefault();
+      if (this.getAttribute('class').indexOf('ct-section--applied') > -1) {
+        return ContentEdit.removeCSSClass(this, 'ct-section--applied');
+      } else {
+        return ContentEdit.addCSSClass(this, 'ct-section--applied');
+      }
+    };
+
+    StyleToolDialog.prototype.save = function() {
+      var detail;
+      detail = {
+        textColor: this._domTextColorSelect.value,
+        textBackgroundColor: this._domTextBackgroundColorSelect.value,
+        marginTop: document.getElementById('domMarginTopInput').value,
+        marginBottom: document.getElementById('domMarginBottomInput').value,
+        marginLeft: document.getElementById('domMarginLeftInput').value,
+        marginRight: document.getElementById('domMarginRightInput').value,
+        paddingTop: document.getElementById('domPaddingTopInput').value,
+        paddingBottom: document.getElementById('domPaddingBottomInput').value,
+        paddingLeft: document.getElementById('domPaddingLeftInput').value,
+        paddingRight: document.getElementById('domPaddingRightInput').value
+      };
+      return this.dispatchEvent(this.createEvent('save', detail));
+    };
+
+    StyleToolDialog.prototype.unmount = function() {
+      StyleToolDialog.__super__.unmount.call(this);
+      this._domBodyInput = null;
+      this._domBodySection = null;
+      this._domApply = null;
+      this._domTextColorSelect = null;
+      return this._domTextBackgroundColorSelect = null;
+    };
+
+    StyleToolDialog.prototype._addDOMEventListeners = function() {
+      StyleToolDialog.__super__._addDOMEventListeners.call(this);
+      return this._domApply.addEventListener('click', (function(_this) {
+        return function(ev) {
+          var cssClass;
+          ev.preventDefault();
+          cssClass = _this._domApply.getAttribute('class');
+          if (cssClass.indexOf('ct-control--muted') === -1) {
+            return _this.save();
+          }
+        };
+      })(this));
+    };
+
+    return StyleToolDialog;
 
   })(ContentTools.DialogUI);
 
